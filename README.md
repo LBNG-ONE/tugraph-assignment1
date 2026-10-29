@@ -35,14 +35,16 @@ tugraph-assignment1/
 │   ├── 01_schema.cql             建标签 / 建索引
 │   ├── 02_crud.cql               增删改查完整演示
 │   └── 03_aggregate.cql          自定义聚合查询（核心）
-├── scripts/                      Bolt 协议自动化脚本
-│   ├── import_data.py            用 Neo4j 驱动批量导入 CSV
+├── scripts/                      批量导入与查询脚本
+│   ├── import_via_rest.ps1       通过 REST 接口批量导入 CSV（本实验采用）
+│   ├── import_data.py            通过 Bolt 协议导入（备选方案）
 │   ├── run_queries.py            批量执行聚合查询并打印表格
 │   └── requirements.txt
 ├── deploy/                       部署方案文档
-│   ├── aliyun-computenest.md     方式一：阿里云计算巢免费试用（本实验采用）
-│   └── docker-local.md           方式二：本地 Docker 单机部署
-└── screenshots/                  实验运行截图
+│   ├── wsl-native.md             方式一：WSL1 + 官方 deb 原生安装（本实验采用）
+│   ├── aliyun-computenest.md     方式二：阿里云计算巢免费试用（备用）
+│   └── docker-local.md           方式三：本地 Docker 单机部署
+└── screenshots/                  24 张实验运行截图
 ```
 
 ---
@@ -108,25 +110,31 @@ tugraph-assignment1/
 
 ### 1. 启动 TuGraph
 
-见 [`deploy/aliyun-computenest.md`](deploy/aliyun-computenest.md)（云上）或 [`deploy/docker-local.md`](deploy/docker-local.md)（本地 Docker）。
+见 [`deploy/wsl-native.md`](deploy/wsl-native.md)（WSL1 + 官方 deb，**本实验采用**）、[`deploy/aliyun-computenest.md`](deploy/aliyun-computenest.md)（云上备用）或 [`deploy/docker-local.md`](deploy/docker-local.md)（本地 Docker）。
 
 ### 2. 建模型
 
-在 Web 界面「图构建」中可视化建表，或直接执行：
+在 Web 界面「图构建」中可视化建表，或在「图查询」里直接执行：
 
 ```bash
-# 在 Web 界面「Cypher 查询」框内逐条执行
-cypher/01_schema.cql
+cypher/01_schema.cql     # 类型要写成带引号的字符串，如 'INT64'
 ```
 
 ### 3. 导入数据
 
-**方式 A（Web 界面）**：图项目 → 数据导入 → 分别选择 `person.csv` / `movie.csv` / `direct.csv` / `acted_in.csv` / `produce.csv`，映射标签与列名。
+**方式 A（REST 接口，本实验采用）**：
 
-**方式 B（Bolt 脚本）**：
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/import_via_rest.ps1 `
+  -Base http://localhost:7070 -Graph lab1_movie -DataDir .\data
+```
+
+**方式 B（Web 界面）**：图项目 → 数据导入 → 分别选择 5 个 CSV，映射标签与列名。
+
+**方式 C（Bolt 脚本）**：
 
 ```bash
-pip install neo4j
+pip install "neo4j>=5,<6"
 python scripts/import_data.py --uri bolt://<host>:7687 --user admin --password <pwd> --clean
 ```
 
@@ -165,7 +173,7 @@ LIMIT 10
 2. `WITH` 实现**多阶段查询**：先按导演聚合，再在外层用 `WHERE` 对聚合结果做过滤，等价于 SQL 的 `HAVING COUNT(*) >= 2`；
 3. `COUNT(DISTINCT a)` 去重，避免同一演员因合作多部影片被重复计数（见 Q2）。
 
-完整 5 组聚合查询与结果分析见[报告 2.4 节](docs/实验一报告.md#24-自定义聚合查询设计)。
+完整 5 组聚合查询与结果分析见[报告 4.3 节](docs/实验一报告.md#43-任务三自定义聚合查询设计4-分)。
 
 ---
 
@@ -183,9 +191,14 @@ LIMIT 10
 
 | 项 | 值 |
 |---|---|
-| TuGraph 版本 | 4.5.x（镜像 `tugraph/tugraph-runtime-ubuntu18.04:4.5.0`） |
-| 部署方式 | 阿里云计算巢 · TuGraph 试用服务 |
+| 宿主机 | Windows 11 家庭中文版（i7-13700H / 16 GB / NVMe） |
+| Linux 层 | WSL1 + Ubuntu 20.04.5 LTS（发行版磁盘在 D 盘） |
+| TuGraph 版本 | 4.5.2 社区版，官方 `.deb` 原生安装（575.7 MB，自带运行库） |
+| 部署方式 | WSL1 + 官方 deb（**不依赖 Docker**） |
+| 子图 | `lab1_movie` |
 | Web 端口 | 7070 |
 | Bolt 端口 | 7687 |
-| 客户端 | Chrome / Edge |
-| Bolt 驱动 | neo4j Python Driver 5.x |
+| RPC 端口 | 9090 |
+| 登录 | `admin` / `73@TuGraph`（Bolt 地址 `127.0.0.1:7687`） |
+| 浏览器 | Chrome 156 |
+| Bolt 驱动 | neo4j Python Driver 5.28.8 |
